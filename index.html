@@ -1,0 +1,1880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>MamaMind — Your Motherhood Companion</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Nunito:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+
+<style>
+/* ═══════════════════════════════════
+   DESIGN TOKENS
+═══════════════════════════════════ */
+:root {
+  --cream:     #fdf6ee;
+  --parchment: #f7ede0;
+  --blush:     #f2d9cc;
+  --rose:      #c97d5e;
+  --dusty:     #b56e52;
+  --terra:     #8f4f3a;
+  --sage:      #7a9e7e;
+  --sage-lt:   #b8d4ba;
+  --bark:      #3b2318;
+  --bark-m:    #5e3a27;
+  --bark-lt:   #8a6352;
+  --gold:      #c9a96e;
+  --card:      rgba(253,246,238,.9);
+  --glass:     rgba(255,255,255,.6);
+  --sh-s:      0 4px 20px rgba(59,35,24,.09);
+  --sh-m:      0 12px 44px rgba(59,35,24,.13);
+  --sh-l:      0 24px 72px rgba(59,35,24,.18);
+  --sh-xl:     0 40px 100px rgba(59,35,24,.22);
+}
+
+/* ═══════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; font-size: 16px; }
+body {
+  font-family: 'Nunito', sans-serif;
+  background: var(--cream);
+  color: var(--bark);
+  overflow-x: hidden;
+  cursor: none;
+  min-height: 100vh;
+}
+::selection { background: rgba(201,125,94,.25); color: var(--bark); }
+
+/* ═══════════════════════════════════
+   CUSTOM CURSOR
+═══════════════════════════════════ */
+#cur-dot {
+  width: 9px; height: 9px;
+  background: var(--rose);
+  border-radius: 50%;
+  position: fixed; z-index: 9999;
+  pointer-events: none;
+  transform: translate(-50%,-50%);
+  transition: transform .06s, width .2s, height .2s, background .2s;
+  mix-blend-mode: multiply;
+}
+#cur-ring {
+  width: 32px; height: 32px;
+  border: 1.5px solid var(--rose);
+  border-radius: 50%;
+  position: fixed; z-index: 9998;
+  pointer-events: none;
+  transform: translate(-50%,-50%);
+  transition: transform .14s ease, width .2s, height .2s, opacity .2s;
+  opacity: .5;
+}
+body:has(button:hover) #cur-dot { width: 14px; height: 14px; background: var(--terra); }
+body:has(button:hover) #cur-ring { width: 44px; height: 44px; opacity: .3; }
+
+/* ═══════════════════════════════════
+   FLOATING PETALS CANVAS
+═══════════════════════════════════ */
+#petals {
+  position: fixed; inset: 0;
+  pointer-events: none; z-index: 0;
+  overflow: hidden;
+}
+.petal {
+  position: absolute;
+  border-radius: 50% 0 50% 0;
+  opacity: 0;
+  animation: pfall linear infinite;
+}
+@keyframes pfall {
+  0%   { opacity: 0;   transform: translateY(-60px) rotate(0deg) scale(.8); }
+  8%   { opacity: .32; }
+  90%  { opacity: .1; }
+  100% { opacity: 0;   transform: translateY(108vh) rotate(580deg) scale(1.1); }
+}
+
+/* ═══════════════════════════════════
+   PAGE TRANSITION SYSTEM
+═══════════════════════════════════ */
+.page {
+  position: fixed; inset: 0;
+  opacity: 0; pointer-events: none;
+  transform: translateY(20px);
+  transition: opacity .55s cubic-bezier(.4,0,.2,1),
+              transform .55s cubic-bezier(.4,0,.2,1);
+  z-index: 2; overflow-y: auto;
+}
+.page.active {
+  opacity: 1; pointer-events: all; transform: translateY(0);
+}
+.page.exit {
+  opacity: 0; transform: translateY(-20px);
+  transition: opacity .38s ease, transform .38s ease;
+}
+
+/* ═══════════════════════════════════
+   ▓▓ WELCOME PAGE
+═══════════════════════════════════ */
+#pg-welcome {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 80% 60% at 10% 2%,  rgba(242,217,204,.7) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 70% at 90% 98%, rgba(184,212,186,.5) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 50% 50%, rgba(201,169,110,.08) 0%, transparent 60%),
+    var(--cream);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-start;
+  padding: 3.5rem 1.5rem 5rem;
+}
+
+/* grain texture overlay */
+#pg-welcome::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.025'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 1;
+}
+
+/* ── botanical ornament ── */
+.orn-wrap {
+  width: 210px; height: 210px;
+  position: relative;
+  margin: 0 auto 2.4rem;
+  animation: orn-in .9s .1s both;
+  flex-shrink: 0;
+}
+@keyframes orn-in {
+  from { opacity: 0; transform: scale(.8) rotate(-15deg); }
+  to   { opacity: 1; transform: scale(1)  rotate(0deg);   }
+}
+.orn-svg {
+  width: 100%; height: 100%;
+  animation: spin-slow 32s linear infinite;
+}
+@keyframes spin-slow { to { transform: rotate(360deg); } }
+.orn-center {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 3.8rem;
+  animation: heartbeat 3.6s ease-in-out infinite;
+  filter: drop-shadow(0 4px 14px rgba(201,125,94,.35));
+}
+@keyframes heartbeat {
+  0%,100% { transform: scale(1); }
+  45%     { transform: scale(1.1); }
+  55%     { transform: scale(1.05); }
+}
+
+/* ── hero text ── */
+.w-badge {
+  display: inline-block;
+  font-size: .68rem; font-weight: 600;
+  letter-spacing: .24em; text-transform: uppercase;
+  color: var(--rose);
+  background: rgba(201,125,94,.1);
+  border: 1px solid rgba(201,125,94,.28);
+  border-radius: 30px;
+  padding: .32rem 1.2rem;
+  margin-bottom: 1.4rem;
+  animation: fu .8s .25s both;
+}
+.w-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(3.4rem, 8vw, 6rem);
+  font-weight: 300;
+  line-height: 1.06;
+  color: var(--bark);
+  text-align: center;
+  animation: fu .9s .38s both;
+  letter-spacing: -.01em;
+}
+.w-title em { font-style: italic; color: var(--rose); }
+.w-sub {
+  font-size: 1.02rem; font-weight: 300;
+  color: var(--bark-m);
+  max-width: 500px;
+  line-height: 1.82;
+  margin: 1.1rem auto 0;
+  text-align: center;
+  animation: fu .9s .5s both;
+}
+
+/* ── flourish divider ── */
+.flr {
+  display: flex; align-items: center;
+  justify-content: center; gap: .65rem;
+  margin: 2.2rem auto;
+  animation: fu .9s .6s both;
+}
+.flr-line {
+  width: 75px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+.flr-leaf { font-size: .9rem; color: var(--sage); }
+
+/* ── feature pills ── */
+.w-pills {
+  display: flex; flex-wrap: wrap;
+  justify-content: center; gap: .6rem;
+  margin-bottom: 2.8rem;
+  animation: fu .9s .7s both;
+}
+.w-pill {
+  display: flex; align-items: center; gap: .4rem;
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(201,125,94,.2);
+  border-radius: 50px;
+  padding: .44rem 1.05rem;
+  font-size: .82rem; color: var(--bark-m);
+  box-shadow: var(--sh-s);
+  transition: transform .22s, box-shadow .22s, border-color .22s, color .22s;
+  cursor: default;
+}
+.w-pill:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--sh-m);
+  border-color: var(--rose);
+  color: var(--rose);
+}
+
+/* ── CTA buttons ── */
+.w-ctas {
+  display: flex; flex-wrap: wrap;
+  justify-content: center; gap: 1rem;
+  animation: fu .9s .85s both;
+  position: relative; z-index: 2;
+}
+.btn-primary {
+  display: inline-flex; align-items: center; gap: .6rem;
+  background: linear-gradient(135deg, var(--rose) 0%, var(--terra) 100%);
+  color: #fff;
+  font-family: 'Nunito', sans-serif;
+  font-size: .95rem; font-weight: 600;
+  border: none; border-radius: 50px;
+  padding: 1rem 2.4rem;
+  cursor: pointer;
+  box-shadow: 0 8px 28px rgba(143,79,58,.35), 0 2px 8px rgba(143,79,58,.2);
+  transition: transform .22s, box-shadow .22s;
+  position: relative; overflow: hidden;
+  letter-spacing: .02em;
+}
+.btn-primary::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,.18) 0%, transparent 55%);
+  pointer-events: none;
+}
+.btn-primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 40px rgba(143,79,58,.42), 0 4px 12px rgba(143,79,58,.25);
+}
+.btn-primary:active { transform: translateY(-1px); }
+.btn-secondary {
+  display: inline-flex; align-items: center; gap: .5rem;
+  background: transparent;
+  color: var(--bark-m);
+  font-family: 'Nunito', sans-serif;
+  font-size: .95rem; font-weight: 400;
+  border: 1.5px solid rgba(59,35,24,.2);
+  border-radius: 50px;
+  padding: 1rem 2.2rem;
+  cursor: pointer;
+  transition: border-color .22s, color .22s, transform .22s, background .22s;
+}
+.btn-secondary:hover {
+  border-color: var(--rose);
+  color: var(--rose);
+  background: rgba(201,125,94,.05);
+  transform: translateY(-3px);
+}
+
+/* ── about section ── */
+.about-wrap {
+  max-width: 720px; width: 100%;
+  margin: 5rem auto 0;
+  animation: fu .9s 1.05s both;
+}
+.about-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2.2rem; font-weight: 300;
+  font-style: italic; color: var(--bark);
+  text-align: center;
+  margin-bottom: 2rem;
+}
+.about-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.2rem;
+  margin-bottom: 2.5rem;
+}
+.a-card {
+  background: var(--glass);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(201,125,94,.18);
+  border-radius: 20px;
+  padding: 1.5rem 1.3rem;
+  box-shadow: var(--sh-s);
+  transition: transform .22s, box-shadow .22s, border-color .22s;
+}
+.a-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--sh-m);
+  border-color: rgba(201,125,94,.35);
+}
+.a-card-icon { font-size: 1.9rem; margin-bottom: .6rem; }
+.a-card-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.12rem; font-weight: 600;
+  color: var(--bark); margin-bottom: .4rem;
+}
+.a-card-body { font-size: .84rem; color: var(--bark-lt); line-height: 1.72; }
+
+.w-footer-note {
+  text-align: center;
+  font-size: .72rem; color: var(--bark-lt); opacity: .5;
+  margin-top: 3.5rem; line-height: 1.75;
+  animation: fu .9s 1.2s both;
+}
+
+@keyframes fu {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══════════════════════════════════
+   ▓▓ APP PAGE
+═══════════════════════════════════ */
+#pg-app {
+  display: flex; flex-direction: column;
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 45% 38% at 2%  3%,  rgba(242,217,204,.45) 0%, transparent 52%),
+    radial-gradient(ellipse 38% 45% at 98% 97%, rgba(184,212,186,.35) 0%, transparent 52%),
+    var(--cream);
+}
+
+/* ── topbar ── */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .85rem 2rem;
+  background: rgba(253,246,238,.92);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(201,125,94,.14);
+  position: sticky; top: 0; z-index: 100;
+  flex-shrink: 0;
+  box-shadow: 0 2px 24px rgba(59,35,24,.07);
+}
+.tb-brand { display: flex; align-items: center; gap: .72rem; }
+.tb-logo {
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--rose), var(--terra));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem;
+  box-shadow: 0 4px 14px rgba(201,125,94,.38);
+  flex-shrink: 0;
+}
+.tb-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.5rem; font-weight: 600; color: var(--bark);
+  line-height: 1.1;
+}
+.tb-name em { font-style: italic; color: var(--rose); }
+.tb-tagline {
+  font-size: .7rem; font-weight: 300;
+  color: var(--bark-lt); letter-spacing: .06em;
+  margin-top: .05rem;
+}
+.tb-right { display: flex; align-items: center; gap: .7rem; }
+.online-pill {
+  display: flex; align-items: center; gap: .38rem;
+  background: rgba(122,158,126,.14);
+  border: 1px solid rgba(122,158,126,.35);
+  border-radius: 30px;
+  padding: .28rem .85rem;
+  font-size: .73rem; font-weight: 600;
+  color: #4d8050;
+  white-space: nowrap;
+}
+.online-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--sage);
+  animation: pulse-dot 2.4s ease-in-out infinite;
+}
+@keyframes pulse-dot { 0%,100% { opacity:1; } 50% { opacity:.3; } }
+.tb-action-btn {
+  background: transparent;
+  border: 1.5px solid rgba(59,35,24,.16);
+  border-radius: 9px;
+  padding: .38rem .9rem;
+  font-family: 'Nunito', sans-serif;
+  font-size: .78rem; font-weight: 500;
+  color: var(--bark-m);
+  cursor: pointer;
+  transition: border-color .2s, color .2s, background .2s;
+  white-space: nowrap;
+}
+.tb-action-btn:hover { border-color: var(--rose); color: var(--rose); background: rgba(201,125,94,.05); }
+
+/* ── layout ── */
+.app-layout {
+  display: flex; flex: 1;
+  overflow: hidden;
+  height: calc(100vh - 64px);
+}
+
+/* ── sidebar ── */
+.sidebar {
+  width: 295px; flex-shrink: 0;
+  background: linear-gradient(168deg, #3b2318 0%, #5e3a27 60%, #4a2e1e 100%);
+  padding: 1.6rem 1.4rem;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 1.7rem;
+  border-right: 1px solid rgba(255,255,255,.06);
+}
+.sidebar::-webkit-scrollbar { width: 3px; }
+.sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 2px; }
+
+/* sidebar section heading */
+.sb-head {
+  display: flex; align-items: center; gap: .55rem;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.05rem; font-weight: 600;
+  color: #f2d9cc;
+  letter-spacing: .04em;
+  margin-bottom: .75rem;
+}
+.sb-head::after {
+  content: '';
+  flex: 1; height: 1px;
+  background: rgba(255,255,255,.08);
+}
+
+/* Collapsible section */
+.sb-section {
+  margin-bottom: 1.5rem;
+}
+
+.sb-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  padding: 0.5rem 0;
+  user-select: none;
+}
+
+.sb-section-header:hover .sb-toggle-btn {
+  color: #f2d9cc;
+}
+
+.sb-toggle-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: rgba(242,217,204,.6);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.3rem 0.5rem;
+  transition: color 0.2s;
+}
+
+.sb-section-content {
+  max-height: 1000px;
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+  opacity: 1;
+}
+
+.sb-section.collapsed .sb-section-content {
+  max-height: 0;
+  opacity: 0;
+}
+
+.sb-section.collapsed .sb-toggle-btn {
+  transform: rotate(-90deg);
+}
+
+@media (max-width: 768px) {
+  .sb-toggle-btn {
+    display: block;
+  }
+}
+
+/* profile card */
+.prof-card {
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 16px;
+  padding: 1.2rem;
+  text-align: center;
+}
+.prof-avatar {
+  width: 62px; height: 62px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--rose), var(--dusty));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.7rem;
+  margin: 0 auto .85rem;
+  box-shadow: 0 6px 20px rgba(0,0,0,.28);
+  border: 2px solid rgba(255,255,255,.15);
+}
+.prof-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.25rem; font-weight: 600;
+  color: #f2d9cc; margin-bottom: .18rem;
+}
+.prof-detail {
+  font-size: .76rem; color: rgba(242,217,204,.5);
+  margin-bottom: .85rem; line-height: 1.55;
+}
+.prof-tags { display: flex; flex-wrap: wrap; justify-content: center; gap: .38rem; }
+.prof-tag {
+  background: rgba(201,125,94,.18);
+  border: 1px solid rgba(201,125,94,.32);
+  border-radius: 30px;
+  padding: .2rem .65rem;
+  font-size: .7rem; color: #f2d9cc;
+}
+
+/* form fields */
+.sb-form { display: flex; flex-direction: column; gap: .78rem; }
+.sb-label {
+  display: block;
+  font-size: .7rem; font-weight: 600;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: rgba(242,217,204,.48);
+  margin-bottom: .2rem;
+}
+.sb-input {
+  width: 100%;
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 9px;
+  padding: .56rem .88rem;
+  font-family: 'Nunito', sans-serif;
+  font-size: .86rem; color: #fdf6ee;
+  outline: none;
+  transition: border-color .2s, background .2s, box-shadow .2s;
+}
+.sb-input::placeholder { color: rgba(253,246,238,.28); }
+.sb-input:focus {
+  border-color: var(--rose);
+  background: rgba(255,255,255,.11);
+  box-shadow: 0 0 0 3px rgba(201,125,94,.12);
+}
+.sb-select {
+  width: 100%;
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 9px;
+  padding: .56rem .88rem;
+  font-family: 'Nunito', sans-serif;
+  font-size: .86rem; color: #fdf6ee;
+  outline: none; cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23c97d5e' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right .88rem center;
+  transition: border-color .2s, box-shadow .2s;
+}
+.sb-select option { background: #3b2318; }
+.sb-select:focus { border-color: var(--rose); box-shadow: 0 0 0 3px rgba(201,125,94,.12); }
+
+.sb-btn {
+  width: 100%;
+  background: linear-gradient(135deg, var(--rose), var(--terra));
+  color: #fff;
+  border: none; border-radius: 9px;
+  padding: .68rem;
+  font-family: 'Nunito', sans-serif;
+  font-size: .88rem; font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 5px 18px rgba(143,79,58,.3);
+  transition: transform .2s, box-shadow .2s;
+  position: relative; overflow: hidden;
+}
+.sb-btn::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,.15), transparent);
+  pointer-events: none;
+}
+.sb-btn:hover { transform: translateY(-2px); box-shadow: 0 9px 26px rgba(143,79,58,.42); }
+.sb-btn:active { transform: translateY(0); }
+
+.sb-btn-outline {
+  width: 100%;
+  background: transparent;
+  color: rgba(242,217,204,.55);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 9px;
+  padding: .6rem;
+  font-family: 'Nunito', sans-serif;
+  font-size: .82rem;
+  cursor: pointer;
+  transition: border-color .2s, color .2s, background .2s;
+}
+.sb-btn-outline:hover { border-color: var(--rose); color: #f2d9cc; background: rgba(201,125,94,.08); }
+
+/* KB status */
+.kb-status {
+  display: flex; align-items: center; gap: .48rem;
+  padding: .52rem .85rem;
+  border-radius: 9px;
+  font-size: .78rem; font-weight: 500;
+  transition: all .3s;
+}
+.kb-status.active {
+  background: rgba(122,158,126,.14);
+  border: 1px solid rgba(122,158,126,.3);
+  color: #8fd494;
+}
+.kb-status.inactive {
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.09);
+  color: rgba(253,246,238,.3);
+}
+
+/* disclaimer */
+.sb-disclaimer {
+  background: rgba(201,125,94,.09);
+  border-left: 3px solid rgba(201,125,94,.5);
+  border-radius: 0 9px 9px 0;
+  padding: .62rem .78rem;
+  font-size: .71rem; color: rgba(242,217,204,.45);
+  line-height: 1.68;
+}
+
+/* ── chat main area ── */
+.chat-main {
+  flex: 1;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+
+/* messages scroll */
+.messages {
+  flex: 1; overflow-y: auto;
+  padding: 2rem 2.5rem;
+  display: flex; flex-direction: column; gap: 1.4rem;
+  scroll-behavior: smooth;
+}
+.messages::-webkit-scrollbar { width: 4px; }
+.messages::-webkit-scrollbar-track { background: transparent; }
+.messages::-webkit-scrollbar-thumb { background: rgba(201,125,94,.22); border-radius: 2px; }
+
+/* empty / welcome state */
+.empty-state {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 3rem; text-align: center;
+}
+.empty-icon {
+  font-size: 3.6rem; margin-bottom: 1.1rem;
+  animation: float-icon 4.2s ease-in-out infinite;
+  filter: drop-shadow(0 6px 18px rgba(201,125,94,.28));
+}
+@keyframes float-icon {
+  0%,100% { transform: translateY(0) rotate(-3deg); }
+  50%      { transform: translateY(-10px) rotate(3deg); }
+}
+.empty-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.75rem; font-weight: 300; font-style: italic;
+  color: var(--bark); margin-bottom: .5rem;
+}
+.empty-sub {
+  font-size: .9rem; font-weight: 300;
+  color: var(--bark-lt);
+  max-width: 380px; line-height: 1.78;
+}
+.suggestion-chips {
+  display: flex; flex-wrap: wrap;
+  justify-content: center; gap: .55rem;
+  margin-top: 1.8rem;
+}
+.s-chip {
+  background: var(--card);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(201,125,94,.2);
+  border-radius: 50px;
+  padding: .46rem 1.05rem;
+  font-size: .81rem; color: var(--bark-m);
+  cursor: pointer;
+  box-shadow: var(--sh-s);
+  transition: transform .22s, border-color .22s, color .22s, box-shadow .22s;
+}
+.s-chip:hover {
+  transform: translateY(-3px);
+  border-color: var(--rose);
+  color: var(--rose);
+  box-shadow: var(--sh-m);
+}
+
+/* date separator */
+.date-sep {
+  text-align: center;
+  font-size: .72rem; color: var(--bark-lt);
+  opacity: .5; margin: .4rem 0;
+  display: flex; align-items: center; gap: .8rem;
+}
+.date-sep::before, .date-sep::after {
+  content: ''; flex: 1; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(201,125,94,.2), transparent);
+}
+
+/* message rows */
+.msg-row {
+  display: flex; gap: .72rem;
+  animation: msg-in .32s cubic-bezier(.4,0,.2,1) both;
+}
+@keyframes msg-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.msg-row.user { flex-direction: row-reverse; }
+
+.msg-avatar {
+  width: 35px; height: 35px; flex-shrink: 0;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem;
+  align-self: flex-end;
+  box-shadow: var(--sh-s);
+  flex-shrink: 0;
+}
+.msg-avatar.bot  { background: linear-gradient(135deg, var(--sage), #5a8c5e); }
+.msg-avatar.user { background: linear-gradient(135deg, var(--rose), var(--terra)); }
+
+.msg-bubble {
+  max-width: 66%;
+  padding: .92rem 1.18rem;
+  border-radius: 20px;
+  font-size: .9rem; line-height: 1.78;
+  box-shadow: var(--sh-s);
+  position: relative;
+}
+.msg-bubble.bot {
+  background: var(--card);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(201,125,94,.18);
+  border-bottom-left-radius: 5px;
+  color: var(--bark);
+}
+.msg-bubble.user {
+  background: linear-gradient(135deg, var(--rose), var(--terra));
+  color: #fff;
+  border-bottom-right-radius: 5px;
+}
+.msg-bubble.bot  strong { color: var(--terra); }
+.msg-bubble.user strong { color: rgba(255,255,255,.9); }
+.msg-time {
+  display: block;
+  font-size: .67rem;
+  margin-top: .5rem; opacity: .42;
+}
+.msg-bubble.user .msg-time { color: rgba(255,255,255,.8); }
+.msg-bubble.bot  .msg-time { color: var(--bark-lt); }
+
+/* typing indicator */
+.typing-row { display: flex; gap: .72rem; align-items: flex-end; }
+.typing-bubble {
+  display: flex; align-items: center; gap: .42rem;
+  padding: .82rem 1.1rem;
+  background: var(--card);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(201,125,94,.18);
+  border-radius: 20px; border-bottom-left-radius: 5px;
+  box-shadow: var(--sh-s);
+  width: 76px;
+}
+.t-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--rose);
+  animation: tdot .9s ease-in-out infinite;
+}
+.t-dot:nth-child(2) { animation-delay: .2s; }
+.t-dot:nth-child(3) { animation-delay: .4s; }
+@keyframes tdot {
+  0%,60%,100% { transform: translateY(0); opacity: .35; }
+  30%          { transform: translateY(-5px); opacity: 1; }
+}
+
+/* ── input area ── */
+.input-area {
+  padding: 1.1rem 2.5rem 1.5rem;
+  background: rgba(253,246,238,.92);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(201,125,94,.12);
+  flex-shrink: 0;
+}
+.input-wrap {
+  display: flex; align-items: flex-end; gap: .85rem;
+  background: var(--glass);
+  backdrop-filter: blur(18px);
+  border: 1.5px solid rgba(201,125,94,.26);
+  border-radius: 18px;
+  padding: .7rem .7rem .7rem 1.3rem;
+  box-shadow: var(--sh-s);
+  transition: border-color .25s, box-shadow .25s;
+}
+.input-wrap:focus-within {
+  border-color: var(--rose);
+  box-shadow: 0 0 0 4px rgba(201,125,94,.09), var(--sh-s);
+}
+#chat-input {
+  flex: 1;
+  background: transparent; border: none; outline: none; resize: none;
+  font-family: 'Nunito', sans-serif;
+  font-size: .93rem; color: var(--bark);
+  line-height: 1.62; max-height: 130px;
+  overflow-y: auto;
+  min-height: 24px;
+}
+#chat-input::placeholder { color: rgba(59,35,24,.35); }
+#chat-input::-webkit-scrollbar { width: 3px; }
+#chat-input::-webkit-scrollbar-thumb { background: rgba(201,125,94,.25); border-radius: 2px; }
+.send-btn {
+  width: 43px; height: 43px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--rose), var(--terra));
+  border: none; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(201,125,94,.4);
+  transition: transform .2s, box-shadow .2s;
+}
+.send-btn:hover { transform: scale(1.08); box-shadow: 0 7px 22px rgba(201,125,94,.52); }
+.send-btn:active { transform: scale(.98); }
+.send-btn svg { fill: #fff; width: 18px; height: 18px; }
+.input-hint {
+  text-align: center;
+  font-size: .67rem; color: var(--bark-lt); opacity: .4;
+  margin-top: .5rem;
+}
+
+/* ── loading overlay ── */
+#loading-overlay {
+  position: fixed; inset: 0;
+  background: rgba(253,246,238,.88);
+  backdrop-filter: blur(8px);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  z-index: 9990;
+  transition: opacity .4s;
+}
+#loading-overlay.hidden { opacity: 0; pointer-events: none; }
+.loading-flower {
+  font-size: 3rem;
+  animation: spin-slow 2s linear infinite;
+  margin-bottom: 1rem;
+}
+.loading-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.3rem; font-style: italic;
+  color: var(--bark-m);
+}
+
+/* ── toast notification ── */
+#toast {
+  position: fixed; bottom: 2.2rem; left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--bark);
+  color: #f2d9cc;
+  padding: .7rem 1.6rem;
+  border-radius: 50px;
+  font-size: .82rem; font-weight: 600;
+  box-shadow: var(--sh-xl);
+  z-index: 9995;
+  opacity: 0; pointer-events: none;
+  transition: transform .38s cubic-bezier(.34,1.56,.64,1), opacity .38s;
+  white-space: nowrap;
+}
+#toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+/* ── modal overlay ── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(59,35,24,.55);
+  backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9000;
+  opacity: 0; pointer-events: none;
+  transition: opacity .3s;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal-box {
+  background: var(--cream);
+  border-radius: 20px;
+  padding: 2rem 2.2rem;
+  max-width: 420px; width: 92%;
+  box-shadow: var(--sh-xl);
+  transform: scale(.92) translateY(20px);
+  transition: transform .35s cubic-bezier(.34,1.56,.64,1);
+}
+.modal-overlay.open .modal-box { transform: scale(1) translateY(0); }
+.modal-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.5rem; font-weight: 600;
+  color: var(--bark); margin-bottom: 1.2rem;
+}
+.modal-form { display: flex; flex-direction: column; gap: .9rem; }
+.modal-label {
+  display: block; font-size: .75rem; font-weight: 600;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--bark-lt); margin-bottom: .22rem;
+}
+.modal-input, .modal-select {
+  width: 100%;
+  background: var(--parchment);
+  border: 1.5px solid rgba(201,125,94,.22);
+  border-radius: 10px;
+  padding: .62rem .95rem;
+  font-family: 'Nunito', sans-serif;
+  font-size: .9rem; color: var(--bark);
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+.modal-input:focus, .modal-select:focus {
+  border-color: var(--rose);
+  box-shadow: 0 0 0 3px rgba(201,125,94,.12);
+}
+.modal-select { appearance: none; cursor: pointer; }
+.modal-select option { background: var(--cream); }
+.modal-btns { display: flex; gap: .75rem; margin-top: .4rem; }
+.modal-btn-p {
+  flex: 1;
+  background: linear-gradient(135deg, var(--rose), var(--terra));
+  color: #fff; border: none; border-radius: 10px;
+  padding: .72rem; font-family: 'Nunito', sans-serif;
+  font-size: .9rem; font-weight: 600; cursor: pointer;
+  box-shadow: 0 5px 18px rgba(143,79,58,.3);
+  transition: transform .2s, box-shadow .2s;
+}
+.modal-btn-p:hover { transform: translateY(-2px); box-shadow: 0 9px 26px rgba(143,79,58,.4); }
+.modal-btn-s {
+  flex: 1;
+  background: transparent; color: var(--bark-m);
+  border: 1.5px solid rgba(59,35,24,.2);
+  border-radius: 10px; padding: .72rem;
+  font-family: 'Nunito', sans-serif;
+  font-size: .9rem; cursor: pointer;
+  transition: border-color .2s, color .2s;
+}
+.modal-btn-s:hover { border-color: var(--rose); color: var(--rose); }
+
+/* ── scrollbar global ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(201,125,94,.22); border-radius: 3px; }
+
+/* ── responsive ── */
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .messages { padding: 1.2rem 1rem; }
+  .input-area { padding: .9rem 1rem 1.1rem; }
+  .msg-bubble { max-width: 84%; }
+  .topbar { padding: .65rem 1rem; }
+  #pg-welcome { padding: 2.5rem 1.2rem 4rem; }
+  .about-grid { grid-template-columns: 1fr; }
+  .orn-wrap { width: 160px; height: 160px; }
+  
+  /* Profile improvements */
+  .prof-card {
+    padding: 1rem;
+    font-size: 0.9rem;
+  }
+  .prof-avatar {
+    width: 52px;
+    height: 52px;
+    font-size: 1.5rem;
+    margin: 0 auto 0.7rem;
+  }
+  .prof-name {
+    font-size: 1.1rem;
+  }
+  .prof-detail {
+    font-size: 0.8rem;
+  }
+  .prof-tag {
+    font-size: 0.7rem;
+    padding: 0.3rem 0.6rem;
+  }
+  
+  /* Modal improvements */
+  .modal-box {
+    padding: 1.5rem 1.2rem;
+    max-width: 90vw;
+  }
+  .modal-title {
+    font-size: 1.2rem;
+  }
+  .modal-input, .modal-select {
+    font-size: 0.85rem;
+    padding: 0.5rem 0.8rem;
+  }
+  .modal-btn-p, .modal-btn-s {
+    font-size: 0.85rem;
+    padding: 0.6rem;
+  }
+  
+  /* Topbar brand */
+  .tb-logo {
+    width: 36px;
+    height: 36px;
+    font-size: 1.1rem;
+  }
+  .tb-name {
+    font-size: 1.2rem;
+  }
+  .tb-tagline {
+    font-size: 0.65rem;
+  }
+  .tb-action-btn {
+    font-size: 0.7rem;
+    padding: 0.3rem 0.7rem;
+  }
+  
+  /* Chat improvements */
+  .msg-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 1.3rem;
+  }
+  .msg-time {
+    font-size: 0.65rem;
+  }
+  
+  /* Suggestion chips */
+  .suggestion-chips {
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+  .s-chip {
+    font-size: 0.8rem;
+    padding: 0.7rem 1rem;
+  }
+  
+  /* Input area */
+  #chat-input {
+    font-size: 0.9rem;
+    max-height: 100px;
+  }
+  .send-btn {
+    width: 36px;
+    height: 36px;
+  }
+  .send-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+/* Extra small devices (phones) */
+@media (max-width: 480px) {
+  body { font-size: 0.9rem; }
+  .topbar {
+    padding: 0.5rem 0.8rem;
+    flex-wrap: wrap;
+  }
+  .tb-brand {
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+  .tb-logo {
+    width: 32px;
+    height: 32px;
+    font-size: 0.95rem;
+  }
+  .tb-name {
+    font-size: 1rem;
+  }
+  .tb-tagline {
+    display: none;
+  }
+  .tb-right {
+    gap: 0.4rem;
+    width: 100%;
+    margin-top: 0.4rem;
+  }
+  .online-pill {
+    font-size: 0.65rem;
+    padding: 0.2rem 0.6rem;
+  }
+  .tb-action-btn {
+    font-size: 0.65rem;
+    padding: 0.25rem 0.6rem;
+  }
+  
+  #pg-welcome {
+    padding: 2rem 1rem 3rem;
+  }
+  
+  .w-title {
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
+  }
+  .w-sub {
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+  
+  .w-pills {
+    gap: 0.5rem;
+  }
+  .w-pill {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.8rem;
+  }
+  
+  .w-ctas {
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+  .btn-primary, .btn-secondary {
+    font-size: 0.9rem;
+    padding: 0.7rem 1.2rem;
+  }
+  
+  .messages {
+    padding: 1rem 0.8rem;
+  }
+  
+  .msg-bubble {
+    max-width: 90%;
+    font-size: 0.85rem;
+    padding: 0.7rem 0.9rem;
+  }
+  
+  .input-area {
+    padding: 0.7rem 0.8rem 0.9rem;
+    gap: 0.5rem;
+  }
+  
+  #chat-input {
+    font-size: 0.85rem;
+    padding: 0.6rem 0.8rem;
+  }
+  
+  .send-btn {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .input-hint {
+    font-size: 0.6rem;
+  }
+  
+  /* Profile card for small screens */
+  .prof-card {
+    padding: 0.8rem;
+  }
+  .prof-avatar {
+    width: 44px;
+    height: 44px;
+    font-size: 1.3rem;
+    margin: 0 auto 0.5rem;
+  }
+  .prof-name {
+    font-size: 0.95rem;
+    margin-bottom: 0.1rem;
+  }
+  .prof-detail {
+    font-size: 0.75rem;
+    margin-bottom: 0.4rem;
+  }
+  .prof-tags {
+    gap: 0.3rem;
+  }
+  .prof-tag {
+    font-size: 0.65rem;
+    padding: 0.25rem 0.5rem;
+  }
+}
+
+</style>
+</head>
+<body>
+
+<!-- Custom Cursor -->
+<div id="cur-dot"></div>
+<div id="cur-ring"></div>
+
+<!-- Floating petals -->
+<div id="petals"></div>
+
+<!-- Loading screen -->
+<div id="loading-overlay">
+  <div class="loading-flower">🌸</div>
+  <div class="loading-text">Loading MamaMind…</div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Profile Modal -->
+<div class="modal-overlay" id="profile-modal">
+  <div class="modal-box">
+    <div class="modal-title">✨ Set Up Your Profile</div>
+    <div class="modal-form">
+      <div>
+        <label class="modal-label">Your Name</label>
+        <input class="modal-input" id="m-name" placeholder="e.g. Priya"/>
+      </div>
+      <div>
+        <label class="modal-label">Baby's Age</label>
+        <input class="modal-input" id="m-age" placeholder="e.g. 2 months"/>
+      </div>
+      <div>
+        <label class="modal-label">Mother Stage</label>
+        <select class="modal-select" id="m-stage">
+          <option>New Mother</option>
+          <option>Expecting</option>
+          <option>Toddler Stage</option>
+          <option>General</option>
+        </select>
+      </div>
+      <div>
+        <label class="modal-label">Delivery Type</label>
+        <select class="modal-select" id="m-delivery">
+          <option>Normal</option>
+          <option>C-Section</option>
+          <option>Prefer not to say</option>
+        </select>
+      </div>
+      <div class="modal-btns">
+        <button class="modal-btn-p" onclick="saveProfileModal()">Save Profile 🌸</button>
+        <button class="modal-btn-s" onclick="closeModal()">Later</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════
+     WELCOME PAGE
+═══════════════════════════════════ -->
+<div class="page active" id="pg-welcome">
+
+  <!-- Ornament -->
+  <div class="orn-wrap">
+    <svg class="orn-svg" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Dashed outer ring -->
+      <circle cx="100" cy="100" r="96" stroke="#c9a96e" stroke-width=".7"
+              stroke-dasharray="3.5 3" opacity=".38"/>
+      <!-- Thin inner ring -->
+      <circle cx="100" cy="100" r="78" stroke="#c97d5e" stroke-width=".4" opacity=".25"/>
+      <!-- Leaf spokes (8) -->
+      <g opacity=".48">
+        <ellipse cx="100" cy="11" rx="4.2" ry="13" fill="#7a9e7e" transform="rotate(0   100 100)"/>
+        <ellipse cx="100" cy="11" rx="4.2" ry="13" fill="#7a9e7e" transform="rotate(45  100 100)"/>
+        <ellipse cx="100" cy="11" rx="4.2" ry="13" fill="#7a9e7e" transform="rotate(90  100 100)"/>
+        <ellipse cx="100" cy="11" rx="4.2" ry="13" fill="#7a9e7e" transform="rotate(135 100 100)"/>
+        <ellipse cx="100" cy="11" rx="4.2" ry="13" fill="#7a9e7e" transform="rotate(180 100 100)"/>
+        <ellipse cx="100" cy="11" rx="4.2" ry="13" fill="#7a9e7e" transform="rotate(225 100 100)"/>
+        <ellipse cx="100" cy="11" rx="4.2" ry="13" fill="#7a9e7e" transform="rotate(270 100 100)"/>
+        <ellipse cx="100" cy="11" rx="4.2" ry="13" fill="#7a9e7e" transform="rotate(315 100 100)"/>
+      </g>
+      <!-- Petal spokes (6) -->
+      <g opacity=".62">
+        <ellipse cx="100" cy="30" rx="7"   ry="22" fill="#f2d9cc" transform="rotate(0   100 100)"/>
+        <ellipse cx="100" cy="30" rx="7"   ry="22" fill="#f2d9cc" transform="rotate(60  100 100)"/>
+        <ellipse cx="100" cy="30" rx="7"   ry="22" fill="#f2d9cc" transform="rotate(120 100 100)"/>
+        <ellipse cx="100" cy="30" rx="7"   ry="22" fill="#f2d9cc" transform="rotate(180 100 100)"/>
+        <ellipse cx="100" cy="30" rx="7"   ry="22" fill="#f2d9cc" transform="rotate(240 100 100)"/>
+        <ellipse cx="100" cy="30" rx="7"   ry="22" fill="#f2d9cc" transform="rotate(300 100 100)"/>
+      </g>
+      <!-- Inner frosted disc -->
+      <circle cx="100" cy="100" r="42" fill="rgba(253,246,238,.94)"
+              stroke="#c97d5e" stroke-width=".9"/>
+      <circle cx="100" cy="100" r="35" fill="rgba(242,217,204,.38)"
+              stroke="#c9a96e" stroke-width=".4" opacity=".55"/>
+    </svg>
+    <div class="orn-center">🌸</div>
+  </div>
+
+  <div class="w-badge">✦ Your Gentle Companion ✦</div>
+
+  <h1 class="w-title">Mama<em>Mind</em></h1>
+
+  <p class="w-sub">
+    A warm, caring space for new mothers — personalised guidance on baby care,
+    daily routines, and emotional well-being, whenever you need it.
+  </p>
+
+  <div class="flr">
+    <div class="flr-line"></div>
+    <div class="flr-leaf">🌿</div>
+    <div class="flr-line"></div>
+  </div>
+
+  <div class="w-pills">
+    <div class="w-pill">🍼 Baby Care Tips</div>
+    <div class="w-pill">🌿 Wellness Guidance</div>
+    <div class="w-pill">💬 Always Available</div>
+    <div class="w-pill">🤱🏻 Personalised Support</div>
+    <div class="w-pill">⏰ Time Management</div>
+    <div class="w-pill">💖 Emotional Well-being</div>
+    <div class="w-pill">🌙 Postpartum Care</div>
+    <div class="w-pill">🧘 Mental Wellness</div>
+  </div>
+
+  <div class="w-ctas">
+    <button class="btn-primary" onclick="enterApp()">
+      Begin Your Journey
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M3 8h10M9 4l4 4-4 4" stroke="#fff" stroke-width="1.6"
+              stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <button class="btn-secondary"
+            onclick="document.getElementById('about-section').scrollIntoView({behavior:'smooth'})">
+      Learn More ↓
+    </button>
+  </div>
+
+  <!-- About section -->
+  <div class="about-wrap" id="about-section">
+    <div class="about-title">Why MamaMind?</div>
+    <div class="about-grid">
+      <div class="a-card">
+        <div class="a-card-icon">🌺</div>
+        <div class="a-card-title">Personalised to You</div>
+        <div class="a-card-body">Share your profile once — your name, baby's age, delivery type — and every response feels crafted just for you.</div>
+      </div>
+      <div class="a-card">
+        <div class="a-card-icon">📚</div>
+        <div class="a-card-title">Knowledge-Grounded</div>
+        <div class="a-card-body">Answers drawn from curated parenting and wellness resources — not generic internet advice.</div>
+      </div>
+      <div class="a-card">
+        <div class="a-card-icon">🛡️</div>
+        <div class="a-card-title">Safe by Design</div>
+        <div class="a-card-body">MamaMind never provides medical diagnoses or prescriptions. Always redirects to professionals when needed.</div>
+      </div>
+      <div class="a-card">
+        <div class="a-card-icon">🌙</div>
+        <div class="a-card-title">Available 24 / 7</div>
+        <div class="a-card-body">Whether it's 3 AM or Sunday afternoon, a gentle, patient voice is always here for you.</div>
+      </div>
+    </div>
+    <div style="text-align:center">
+      <button class="btn-primary" onclick="enterApp()">Get Started 🌸</button>
+    </div>
+  </div>
+
+  <p class="w-footer-note">
+    MamaMind provides general lifestyle &amp; wellness guidance only.<br>
+    Always consult a qualified healthcare professional for medical concerns.
+  </p>
+
+</div><!-- /pg-welcome -->
+
+
+<!-- ═══════════════════════════════════
+     APP PAGE
+═══════════════════════════════════ -->
+<div class="page" id="pg-app">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="tb-brand">
+      <div class="tb-logo">🌸</div>
+      <div>
+        <div class="tb-name">Mama<em>Mind</em></div>
+        <div class="tb-tagline">Your motherhood companion</div>
+      </div>
+    </div>
+    <div class="tb-right">
+      <div class="online-pill">
+        <span class="online-dot"></span>
+        <span id="status-label">Ready</span>
+      </div>
+      <button class="tb-action-btn" onclick="openProfileModal()">✏️ Profile</button>
+      <button class="tb-action-btn" onclick="clearAllChat()">🗑 Clear</button>
+      <button class="tb-action-btn" onclick="goWelcome()">← Home</button>
+    </div>
+  </header>
+
+  <div class="app-layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+
+      <!-- Profile card (populated by JS) -->
+      <div id="prof-card-area"></div>
+
+      <!-- Profile form -->
+      <div class="sb-section">
+        <div class="sb-section-header">
+          <div class="sb-head">👤 Your Profile</div>
+          <button class="sb-toggle-btn" onclick="toggleSection(event, 'profile-section')">▼</button>
+        </div>
+        <div class="sb-section-content" id="profile-section">
+          <div class="sb-form">
+            <div>
+              <label class="sb-label">Your Name</label>
+              <input class="sb-input" id="sb-name" placeholder="e.g. Priya"/>
+            </div>
+            <div>
+              <label class="sb-label">Baby's Age</label>
+              <input class="sb-input" id="sb-age" placeholder="e.g. 2 months"/>
+            </div>
+            <div>
+              <label class="sb-label">Mother Stage</label>
+              <select class="sb-select" id="sb-stage">
+                <option>New Mother</option>
+                <option>Expecting</option>
+                <option>Toddler Stage</option>
+                <option>General</option>
+              </select>
+            </div>
+            <div>
+              <label class="sb-label">Delivery Type</label>
+              <select class="sb-select" id="sb-delivery">
+                <option>Normal</option>
+                <option>C-Section</option>
+                <option>Prefer not to say</option>
+              </select>
+            </div>
+            <button class="sb-btn" onclick="saveProfile()">✅ Save Profile</button>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- Disclaimer -->
+      <div class="sb-disclaimer">
+        ⚠️ MamaMind provides general lifestyle guidance only.
+        Always consult a qualified professional for medical concerns.
+      </div>
+
+    </aside>
+
+    <!-- Chat main -->
+    <div class="chat-main">
+      <div class="messages" id="messages-area">
+        <!-- empty state shown by JS -->
+      </div>
+
+      <!-- Input -->
+      <div class="input-area">
+        <div class="input-wrap">
+          <textarea id="chat-input" rows="1"
+            placeholder="e.g. How do I soothe a fussy baby at night?"></textarea>
+          <button class="send-btn" onclick="sendMessage()" title="Send">
+            <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+              <path d="M17.5 10L2.5 2.5 8 10l-5.5 7.5L17.5 10z"/>
+            </svg>
+          </button>
+        </div>
+        <div class="input-hint">Enter to send · Shift+Enter for new line</div>
+      </div>
+
+    </div><!-- /chat-main -->
+  </div><!-- /app-layout -->
+
+</div><!-- /pg-app -->
+
+
+<script>
+/* ═══════════════════════════════════
+   STATE
+═══════════════════════════════════ */
+const STATE = {
+  profile: JSON.parse(localStorage.getItem('mm_profile') || 'null'),
+  chat: JSON.parse(localStorage.getItem('mm_chat') || '[]'),
+  // API is same-origin (served by FastAPI on Render)
+};
+
+/* ═══════════════════════════════════
+   CURSOR
+═══════════════════════════════════ */
+const dot  = document.getElementById('cur-dot');
+const ring = document.getElementById('cur-ring');
+let mx = 0, my = 0, rx = 0, ry = 0;
+document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+function animCursor() {
+  dot.style.left = mx + 'px'; dot.style.top = my + 'px';
+  rx += (mx - rx) * .14; ry += (my - ry) * .14;
+  ring.style.left = rx + 'px'; ring.style.top = ry + 'px';
+  requestAnimationFrame(animCursor);
+}
+animCursor();
+
+/* ═══════════════════════════════════
+   FLOATING PETALS
+═══════════════════════════════════ */
+(function spawnPetals() {
+  const canvas = document.getElementById('petals');
+  const colors = ['#f2d9cc','#e8c8b8','#b8d4ba','#ddc4b4','#e8d8cc','#c9d8ca'];
+  for (let i = 0; i < 22; i++) {
+    const p = document.createElement('div');
+    p.className = 'petal';
+    const sz = 5 + Math.random() * 14;
+    p.style.cssText = `
+      width:${sz}px; height:${sz}px;
+      left:${Math.random() * 100}vw;
+      background:${colors[Math.floor(Math.random() * colors.length)]};
+      animation-duration:${11 + Math.random() * 18}s;
+      animation-delay:${-Math.random() * 22}s;
+      opacity:.28;
+    `;
+    canvas.appendChild(p);
+  }
+})();
+
+/* ═══════════════════════════════════
+   PAGE TRANSITIONS
+═══════════════════════════════════ */
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => {
+    if (p.id === id) {
+      p.classList.remove('exit');
+      p.classList.add('active');
+    } else {
+      p.classList.add('exit');
+      p.classList.remove('active');
+      setTimeout(() => p.classList.remove('exit'), 400);
+    }
+  });
+}
+function enterApp() { showPage('pg-app'); renderChat(); updateStatus(); }
+function goWelcome() { showPage('pg-welcome'); }
+
+/* ═══════════════════════════════════
+   TOAST
+═══════════════════════════════════ */
+let toastTimer;
+function toast(msg, dur = 2800) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), dur);
+}
+
+/* ═══════════════════════════════════
+   MODAL
+═══════════════════════════════════ */
+function openProfileModal() {
+  document.getElementById('profile-modal').classList.add('open');
+  if (STATE.profile) {
+    document.getElementById('m-name').value     = STATE.profile.name || '';
+    document.getElementById('m-age').value      = STATE.profile.baby_age || '';
+    document.getElementById('m-stage').value    = STATE.profile.stage || 'New Mother';
+    document.getElementById('m-delivery').value = STATE.profile.delivery_type || 'Normal';
+  }
+}
+function closeModal() {
+  document.getElementById('profile-modal').classList.remove('open');
+}
+document.getElementById('profile-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('profile-modal')) closeModal();
+});
+
+function saveProfileModal() {
+  const name = document.getElementById('m-name').value.trim();
+  if (!name) { toast('Please enter your name 🌸'); return; }
+  STATE.profile = {
+    name, baby_age: document.getElementById('m-age').value.trim(),
+    stage: document.getElementById('m-stage').value,
+    delivery_type: document.getElementById('m-delivery').value,
+  };
+  localStorage.setItem('mm_profile', JSON.stringify(STATE.profile));
+  closeModal();
+  syncSidebarProfile();
+  renderProfileCard();
+  updateStatus();
+  toast(`Welcome, ${name}! 💖`);
+}
+
+/* ═══════════════════════════════════
+   PROFILE
+═══════════════════════════════════ */
+function saveProfile() {
+  const name = document.getElementById('sb-name').value.trim();
+  if (!name) { toast('Please enter your name 🌸'); return; }
+  STATE.profile = {
+    name, baby_age: document.getElementById('sb-age').value.trim(),
+    stage: document.getElementById('sb-stage').value,
+    delivery_type: document.getElementById('sb-delivery').value,
+  };
+  localStorage.setItem('mm_profile', JSON.stringify(STATE.profile));
+  renderProfileCard();
+  updateStatus();
+  toast(`Profile saved! 💖`);
+}
+
+/* Toggle collapsible sections on mobile/tablet */
+function toggleSection(event, sectionId) {
+  event.preventDefault();
+  event.stopPropagation();
+  const section = document.getElementById(sectionId).closest('.sb-section');
+  section.classList.toggle('collapsed');
+}
+
+function syncSidebarProfile() {
+  if (!STATE.profile) return;
+  document.getElementById('sb-name').value      = STATE.profile.name || '';
+  document.getElementById('sb-age').value       = STATE.profile.baby_age || '';
+  document.getElementById('sb-stage').value     = STATE.profile.stage || 'New Mother';
+  document.getElementById('sb-delivery').value  = STATE.profile.delivery_type || 'Normal';
+}
+
+function renderProfileCard() {
+  const area = document.getElementById('prof-card-area');
+  if (!STATE.profile || !STATE.profile.name) { area.innerHTML = ''; return; }
+  const p = STATE.profile;
+  area.innerHTML = `
+    <div class="prof-card">
+      <div class="prof-avatar">👩🏻</div>
+      <div class="prof-name">${p.name}</div>
+      <div class="prof-detail">🍼 Baby: ${p.baby_age || '—'}</div>
+      <div class="prof-tags">
+        <span class="prof-tag">${p.stage}</span>
+        <span class="prof-tag">${p.delivery_type}</span>
+      </div>
+    </div>`;
+}
+
+/* ═══════════════════════════════════
+   STATUS
+═══════════════════════════════════ */
+function updateStatus() {
+  const lbl = document.getElementById('status-label');
+  if (!lbl) return;
+  lbl.textContent = STATE.profile ? 'Ready to chat' : 'Set profile';
+}
+
+/* ═══════════════════════════════════
+   API CONNECTION TEST
+═══════════════════════════════════ */
+async function testConnection() {
+  const kbEl = document.getElementById('kb-st');
+  kbEl.className = 'kb-status inactive'; kbEl.textContent = '⏳ Connecting…';
+  try {
+    const res = await fetch('/health', { method: 'GET', signal: AbortSignal.timeout(5000) });
+    if (res.ok) {
+      const data = await res.json();
+      kbEl.className = 'kb-status active';
+      kbEl.textContent = '✅ Backend ready · ' + (data.chunks || 0) + ' chunks';
+      toast('MamaMind backend connected! 🎉');
+    } else { throw new Error('Non-OK'); }
+  } catch {
+    kbEl.className = 'kb-status inactive'; kbEl.textContent = '❌ Backend unreachable';
+    toast('Backend not reachable — check Render logs.');
+  }
+}
+
+/* ═══════════════════════════════════
+   CHAT RENDERING
+═══════════════════════════════════ */
+function timeNow() {
+  return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatText(txt) {
+  return txt
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/^\* /gm, '')
+    .replace(/\n/g, '<br>');
+}
+
+function renderChat() {
+  const area = document.getElementById('messages-area');
+  if (!area) return;
+  area.innerHTML = '';
+
+  if (STATE.chat.length === 0) {
+    area.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🌸</div>
+        <div class="empty-title">Hello, dear mama.</div>
+        <div class="empty-sub">
+          How can I support you today? Ask me anything about baby care,
+          daily routines, or emotional well-being.
+        </div>
+        <div class="suggestion-chips">
+          <div class="s-chip" onclick="fillInput(this)">🍼 Baby won't sleep at night</div>
+          <div class="s-chip" onclick="fillInput(this)">🤱🏻 Breastfeeding tips</div>
+          <div class="s-chip" onclick="fillInput(this)">💆 Managing postpartum fatigue</div>
+          <div class="s-chip" onclick="fillInput(this)">⏰ Daily routine ideas for a newborn</div>
+          <div class="s-chip" onclick="fillInput(this)">😢 Feeling overwhelmed — what can help?</div>
+        </div>
+      </div>`;
+    return;
+  }
+
+  // Date separator
+  const sep = document.createElement('div');
+  sep.className = 'date-sep';
+  sep.textContent = 'Today';
+  area.appendChild(sep);
+
+  STATE.chat.forEach(msg => appendBubble(msg, false));
+  area.scrollTop = area.scrollHeight;
+}
+
+function appendBubble(msg, scroll = true) {
+  const area = document.getElementById('messages-area');
+
+  // Remove empty state if present
+  const empty = area.querySelector('.empty-state');
+  if (empty) empty.remove();
+
+  const isUser = msg.role === 'user';
+  const row    = document.createElement('div');
+  row.className = `msg-row ${isUser ? 'user' : ''}`;
+  row.innerHTML = `
+    <div class="msg-avatar ${isUser ? 'user' : 'bot'}">${isUser ? '👩🏻' : '🌸'}</div>
+    <div class="msg-bubble ${isUser ? 'user' : 'bot'}">
+      ${formatText(msg.content)}
+      <time class="msg-time">${msg.time || timeNow()}</time>
+    </div>`;
+  area.appendChild(row);
+  if (scroll) area.scrollTop = area.scrollHeight;
+}
+
+function showTyping() {
+  const area = document.getElementById('messages-area');
+  const row  = document.createElement('div');
+  row.className = 'typing-row'; row.id = 'typing-ind';
+  row.innerHTML = `
+    <div class="msg-avatar bot">🌸</div>
+    <div class="typing-bubble">
+      <span class="t-dot"></span>
+      <span class="t-dot"></span>
+      <span class="t-dot"></span>
+    </div>`;
+  area.appendChild(row);
+  area.scrollTop = area.scrollHeight;
+}
+
+function hideTyping() {
+  const el = document.getElementById('typing-ind');
+  if (el) el.remove();
+}
+
+function fillInput(el) {
+  const ta = document.getElementById('chat-input');
+  ta.value = el.textContent.replace(/^[^\w]+/, '').trim();
+  ta.focus(); autoGrow(ta);
+}
+
+/* ═══════════════════════════════════
+   SEND MESSAGE
+═══════════════════════════════════ */
+async function sendMessage() {
+  const ta = document.getElementById('chat-input');
+  const q  = ta.value.trim();
+  if (!q) return;
+
+  if (!STATE.profile) {
+    toast('Please set your profile first 🌸');
+    openProfileModal(); return;
+  }
+
+  // Add user message
+  const userMsg = { role: 'user', content: q, time: timeNow() };
+  STATE.chat.push(userMsg);
+  localStorage.setItem('mm_chat', JSON.stringify(STATE.chat));
+  appendBubble(userMsg);
+  ta.value = ''; ta.style.height = 'auto';
+
+  // Show typing
+  showTyping();
+
+  try {
+    let reply;
+
+    // Always call same-origin FastAPI backend
+    const res = await fetch('/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question: q,
+        profile: STATE.profile,
+        history: STATE.chat.slice(-10),
+      }),
+    });
+    const data = await res.json();
+    reply = data.response || data.answer || data.message || 'I am here for you! 🌸';
+
+    hideTyping();
+    const botMsg = { role: 'assistant', content: reply, time: timeNow() };
+    STATE.chat.push(botMsg);
+    localStorage.setItem('mm_chat', JSON.stringify(STATE.chat));
+    appendBubble(botMsg);
+
+  } catch (err) {
+    hideTyping();
+    const errMsg = { role: 'assistant', content: '🌸 Sorry, I couldn\'t reach the server. Please check your API connection in the sidebar.', time: timeNow() };
+    STATE.chat.push(errMsg);
+    appendBubble(errMsg);
+  }
+}
+
+/* Demo response for offline preview */
+function demoResponse(q) {
+  const responses = [
+    `**Answer:**\nThank you for reaching out! It's completely normal to have questions as a new mama.\n\n**Practical Tips:**\n• Try establishing a consistent bedtime routine around the same time each evening\n• A warm bath followed by gentle massage can work wonders for baby\n• Keep the room cool, dark, and quiet for better sleep\n• White noise or soft lullabies can help soothe a fussy baby\n\n**Note:**\nYou're doing an amazing job! Every day you're growing stronger as a mother. 💖`,
+    `**Answer:**\nSelf-care is not selfish — it's essential for you and your baby.\n\n**Practical Tips:**\n• Rest when the baby rests, even for short naps\n• Accept help from family and friends without hesitation\n• Stay hydrated — keep a water bottle close at all times\n• Gentle walks outside can lift your mood naturally\n\n**Note:**\nRemember: a happy mama means a happy baby. You deserve care too. 🌸`,
+    `**Answer:**\nThe early weeks can feel overwhelming, but you're not alone in this journey.\n\n**Practical Tips:**\n• Break your day into small, manageable blocks\n• Prioritise feeding and bonding — everything else can wait\n• Connect with other new mothers for shared support\n• Write down your feelings — journaling can be very healing\n\n**Note:**\nTake it one hour at a time. You are stronger than you know. 🌿`,
+  ];
+  return responses[Math.floor(Math.random() * responses.length)];
+}
+
+/* ═══════════════════════════════════
+   CLEAR CHAT
+═══════════════════════════════════ */
+function clearAllChat() {
+  STATE.chat = [];
+  localStorage.removeItem('mm_chat');
+  renderChat();
+  toast('Chat cleared 🌿');
+}
+
+/* ═══════════════════════════════════
+   TEXTAREA AUTO-GROW
+═══════════════════════════════════ */
+function autoGrow(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 130) + 'px';
+}
+const ta = document.getElementById('chat-input');
+if (ta) {
+  ta.addEventListener('input', () => autoGrow(ta));
+  ta.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+}
+
+/* ═══════════════════════════════════
+   INIT
+═══════════════════════════════════ */
+window.addEventListener('load', () => {
+  // Hide loading screen
+  setTimeout(() => {
+    document.getElementById('loading-overlay').classList.add('hidden');
+  }, 900);
+
+  // Restore saved profile
+  if (STATE.profile) {
+    syncSidebarProfile();
+    renderProfileCard();
+  }
+
+  updateStatus();
+
+  // Auto-connect to same-origin backend on load
+  testConnection();
+});
+</script>
+</body>
+</html>
